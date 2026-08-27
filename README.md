@@ -7,6 +7,7 @@ Official Java client for [RelayPDF](https://relaypdf.com).
 Java 17+, `java.net.http.HttpClient`, Jackson databind. Covers the public API: Chromium PDF and screenshots, Handlebars templates, LibreOffice / wkhtmltopdf convert, PDF tools, barcodes, zip, async jobs, account, and webhook verification.
 
 - **Docs:** [relaypdf.com/docs/sdks/java](https://relaypdf.com/docs/sdks/java)
+- **Source:** [timspell1/relaypdf-java](https://github.com/timspell1/relaypdf-java)
 - **REST:** [relaypdf.com/docs](https://relaypdf.com/docs)
 - **OpenAPI:** [relaypdf.com/openapi.json](https://relaypdf.com/openapi.json)
 - **Support:** [support@relaypdf.com](mailto:support@relaypdf.com)
@@ -27,10 +28,10 @@ Maven:
 </dependency>
 ```
 
-Until Maven Central publish, install from this repo:
+Until Maven Central publish, install from [timspell1/relaypdf-java](https://github.com/timspell1/relaypdf-java):
 
 ```bash
-mvn -f sdks/java/pom.xml install
+mvn -f pom.xml install
 ```
 
 ## Authentication
