@@ -1,0 +1,30 @@
+name: Publish pending Central deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploymentId:
+        description: Sonatype Central deployment ID
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish validated deployment
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_TOKEN: ${{ secrets.CENTRAL_TOKEN }}
+          DEPLOYMENT_ID: ${{ inputs.deploymentId }}
+        run: |
+          status=$(curl -sS -o /tmp/central-out -w "%{http_code}" \
+            -u "$CENTRAL_USERNAME:$CENTRAL_TOKEN" \
+            -X POST \
+            "https://central.sonatype.com/api/v1/publisher/deployment/$DEPLOYMENT_ID")
+          echo "HTTP $status"
+          cat /tmp/central-out
+          echo
+          if [ "$status" != "204" ] && [ "$status" != "200" ]; then
+            exit 1
+          fi
