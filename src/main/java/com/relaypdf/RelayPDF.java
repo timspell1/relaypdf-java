@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 
 public final class RelayPDF {
   public static final String DEFAULT_BASE_URL = "https://api.relaypdf.com";
-  public static final String VERSION = "0.1.0";
+  public static final String VERSION = "0.1.1";
   public static final String USER_AGENT = "relaypdf-java/" + VERSION + " (+https://relaypdf.com)";
 
   @FunctionalInterface
@@ -74,6 +74,50 @@ public final class RelayPDF {
     this.webhooks = new WebhooksResource(this);
   }
 
+  /** Input accepts url, base64 file or an uploaded fileId. */
+  public GenerateResult process(String operation, Map<String, Object> input) {
+    return process(operation, input, Map.of());
+  }
+
+  public GenerateResult process(String operation, Map<String, Object> input, Map<String, Object> billing) {
+    String path = switch (operation) {
+      case "ocr" -> "/v1/pdf/ocr";
+      case "pdfa" -> "/v1/pdf/pdfa";
+      case "crop" -> "/v1/pdf/crop";
+      case "resize" -> "/v1/pdf/resize";
+      case "repair" -> "/v1/pdf/repair";
+      case "optimize" -> "/v1/pdf/optimize";
+      case "attachments" -> "/v1/pdf/attachments";
+      case "extract-images" -> "/v1/pdf/extract-images";
+      case "compress" -> "/v1/pdf/compress-advanced";
+      case "image-convert" -> "/v1/images/convert";
+      case "email" -> "/v1/email";
+      default -> throw new IllegalArgumentException("Unknown document operation");
+    };
+    Map<String, String> headers = new LinkedHashMap<>();
+    if (billing != null) {
+      Object key = billing.get("idempotencyKey");
+      if (key != null && !key.toString().isEmpty()) headers.put("Idempotency-Key", key.toString());
+      Object cap = billing.get("maxChargeMicrodollars");
+      if (cap != null) headers.put("X-RelayPDF-Max-Charge-Microdollars", cap.toString());
+    }
+    return generate(path, input, headers);
+  }
+
+  public Map<String, Object> billingUsage() {
+    return sendJson("GET", "/v1/billing/usage", null, true);
+  }
+
+  public Map<String, Object> billingLimits() {
+    return sendJson("GET", "/v1/billing/limits", null, true);
+  }
+
+  public Map<String, Object> billingLimits(Integer maxJobMicrodollars) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("maxJobMicrodollars", maxJobMicrodollars);
+    return sendJson("PATCH", "/v1/billing/limits", body, true);
+  }
+
   public Map<String, Object> health() {
     return sendJson("GET", "/health", null, false);
   }
@@ -83,12 +127,19 @@ public final class RelayPDF {
   }
 
   TransportResponse request(String method, String path, Object body, boolean auth) {
+    return request(method, path, body, auth, Map.of(), false);
+  }
+
+  TransportResponse request(String method, String path, Object body, boolean auth, Map<String, String> extraHeaders, boolean raw) {
     try {
       Map<String, String> headers = new LinkedHashMap<>();
       headers.put("User-Agent", USER_AGENT);
+      if (extraHeaders != null) headers.putAll(extraHeaders);
       byte[] payload = null;
       if (auth) headers.put("Authorization", "Bearer " + apiKey);
-      if (body != null) {
+      if (raw && body instanceof byte[] bytes) {
+        payload = bytes;
+      } else if (body != null) {
         headers.put("Content-Type", "application/json");
         payload = MAPPER.writeValueAsBytes(body);
       }
@@ -103,7 +154,11 @@ public final class RelayPDF {
   }
 
   GenerateResult generate(String path, Map<String, Object> body) {
-    TransportResponse response = request("POST", path, body, true);
+    return generate(path, body, Map.of());
+  }
+
+  GenerateResult generate(String path, Map<String, Object> body, Map<String, String> extraHeaders) {
+    TransportResponse response = request("POST", path, body, true, extraHeaders, false);
     if (response.status() == 202) {
       Map<String, Object> payload = readMap(response.body());
       return new AsyncResult("async", str(payload.get("id")), "processing", str(payload.get("pollUrl")));
@@ -474,6 +529,18 @@ public final class RelayPDF {
           firstNonEmpty(header(response.headers(), "content-type"), "application/octet-stream"),
           response.body()
       );
+    }
+
+    public Map<String, Object> upload(byte[] bytes, String filename) {
+      Map<String, String> headers = new LinkedHashMap<>();
+      headers.put("Content-Type", "application/octet-stream");
+      headers.put("Content-Length", Integer.toString(bytes.length));
+      headers.put("X-Filename", filename == null || filename.isEmpty() ? "upload.bin" : filename);
+      return readMap(client.request("POST", "/v1/files", bytes, true, headers, true).body());
+    }
+
+    public Map<String, Object> delete(String id) {
+      return client.sendJson("DELETE", "/v1/files/" + id, null, true);
     }
   }
 

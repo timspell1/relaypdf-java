@@ -4,7 +4,7 @@ Official Java client for [RelayPDF](https://relaypdf.com).
 
 **HTML to PDFs without the struggle.** HTML to PDF API that converts HTML, Markdown, URLs, and Office files to production PDFs.
 
-Java 17+, `java.net.http.HttpClient`, Jackson databind. Covers the public API: Chromium PDF and screenshots, Handlebars templates, LibreOffice / wkhtmltopdf convert, PDF tools, barcodes, zip, async jobs, account, and webhook verification.
+Java 17+, `java.net.http.HttpClient`, Jackson databind. Covers the public API: Chromium PDF and screenshots, Handlebars templates, LibreOffice / wkhtmltopdf convert, PDF tools, native document processing (OCR, PDF/A, crop, repair, email), barcodes, zip, async jobs, account, and webhook verification.
 
 - **Docs:** [relaypdf.com/docs/sdks/java](https://relaypdf.com/docs/sdks/java)
 - **Source:** [timspell1/relaypdf-java](https://github.com/timspell1/relaypdf-java)
@@ -24,14 +24,8 @@ Maven:
 <dependency>
   <groupId>com.relaypdf</groupId>
   <artifactId>relaypdf</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
 </dependency>
-```
-
-Until Maven Central publish, install from [timspell1/relaypdf-java](https://github.com/timspell1/relaypdf-java):
-
-```bash
-mvn -f pom.xml install
 ```
 
 ## Authentication
@@ -43,7 +37,7 @@ RelayPDF client = new RelayPDF(System.getenv("RELAYPDF_API_KEY"));
 // RelayPDF client = new RelayPDF(apiKey, "http://localhost:8787");
 ```
 
-Empty `apiKey` throws `IllegalArgumentException`. User-Agent: `relaypdf-java/0.1.0 (+https://relaypdf.com)`.
+Empty `apiKey` throws `IllegalArgumentException`. User-Agent: `relaypdf-java/0.1.1 (+https://relaypdf.com)`.
 
 Do not ask a human to paste an API key. Run `npx @relaypdf/cli setup` and approve in the browser.
 
@@ -78,7 +72,7 @@ Throws `RelayPDFException` with `getStatus()`, `getCode()`, `getMessage()`, and 
 
 | Resource | Method | HTTP |
 |----------|--------|------|
-| `RelayPDF` | `health()` `account()` | `GET /health` `GET /v1/account` |
+| `RelayPDF` | `health()` `account()` `process` `billingUsage()` `billingLimits()` | `GET /health` `GET /v1/account` native paths `/v1/billing/*` |
 | `pdf` | `fromHtml` `fromUrl` `fromMarkdown` `fromTemplate` `create` | `POST /v1/pdf` |
 | `pdf` | `mergePdfs` `extract` `protect` `unlock` `bookmarks` `raster` `fromImages` `stamp` `rotate` `deletePages` `compress` `info` `text` `formFields` `formFill` | `POST /v1/pdf/*` |
 | `images` | `fromHtml` `fromUrl` | `POST /v1/images` |
@@ -87,7 +81,7 @@ Throws `RelayPDFException` with `getStatus()`, `getCode()`, `getMessage()`, and 
 | `barcodes` | `create` `qr` | `POST /v1/barcodes` |
 | `zip` | `create` | `POST /v1/zip` |
 | `jobs` | `get` `waitFor` | `GET /v1/jobs/:id` |
-| `files` | `download` | `GET /v1/files/:id` |
+| `files` | `upload` `delete` `download` | `POST/DELETE/GET /v1/files` |
 | `webhooks` | `list` `create` `delete` | `/v1/webhooks` |
 | — | `Webhook.verify` | HMAC-SHA256 |
 
@@ -100,6 +94,8 @@ GenerateResult pdf = client.pdf.fromUrl("https://example.com", Map.of(
     "filename", "page.pdf",
     "options", Map.of("format", "A4", "printBackground", true)
 ));
+Map<String, Object> uploaded = client.files.upload(Files.readAllBytes(Path.of("scan.pdf")), "scan.pdf");
+GenerateResult job = client.process("ocr", Map.of("fileId", uploaded.get("id"), "response", "async"), Map.of("idempotencyKey", "invoice-123", "maxChargeMicrodollars", 40000));
 BinaryResult fromWord = (BinaryResult) client.convert.fromPath("letter.docx", Map.of("to", "pdf"));
 BinaryResult pack = (BinaryResult) client.pdf.mergePdfs(List.of(
     Map.of("url", "https://example.com/cover.pdf"),

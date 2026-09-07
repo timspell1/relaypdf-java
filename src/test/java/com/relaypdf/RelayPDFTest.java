@@ -98,6 +98,30 @@ class RelayPDFTest {
     assertThrows(IllegalArgumentException.class, () -> new RelayPDF(""));
   }
 
+  @Test
+  void processAndUpload() throws Exception {
+    java.util.ArrayList<Map<String, String>> captured = new java.util.ArrayList<>();
+    java.util.ArrayList<String> urls = new java.util.ArrayList<>();
+    java.util.concurrent.atomic.AtomicInteger n = new java.util.concurrent.atomic.AtomicInteger();
+    RelayPDF client = client((method, url, headers, payload) -> {
+      urls.add(url);
+      captured.add(headers);
+      if (n.incrementAndGet() == 1) {
+        return json(201, "{\"id\":\"upload_test\",\"filename\":\"scan.pdf\",\"sizeBytes\":3}", Map.of());
+      }
+      return json(202, "{\"id\":\"doc_test\",\"status\":\"processing\",\"pollUrl\":\"https://api.relaypdf.com/v1/jobs/doc_test\"}", Map.of());
+    });
+    Map<String, Object> uploaded = client.files.upload("abc".getBytes(StandardCharsets.UTF_8), "scan.pdf");
+    GenerateResult job = client.process("ocr", Map.of("fileId", "upload_test", "response", "async"), Map.of("idempotencyKey", "invoice-1", "maxChargeMicrodollars", 40000));
+    assertEquals("upload_test", uploaded.get("id"));
+    assertEquals("https://api.relaypdf.com/v1/files", urls.get(0));
+    assertEquals("scan.pdf", captured.get(0).get("X-Filename"));
+    assertEquals("https://api.relaypdf.com/v1/pdf/ocr", urls.get(1));
+    assertEquals("invoice-1", captured.get(1).get("Idempotency-Key"));
+    assertEquals("40000", captured.get(1).get("X-RelayPDF-Max-Charge-Microdollars"));
+    assertTrue(job instanceof AsyncResult);
+  }
+
   private static RelayPDF client(RelayPDF.Transport transport) {
     return new RelayPDF("pdf_live_test", RelayPDF.DEFAULT_BASE_URL, transport);
   }
