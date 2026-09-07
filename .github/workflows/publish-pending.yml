@@ -19,12 +19,12 @@ jobs:
           DEPLOYMENT_ID: ${{ inputs.deploymentId }}
         run: |
           echo "GET status"
-          curl -sS -u "$CENTRAL_USERNAME:$CENTRAL_TOKEN" \
+          curl -sS -H "Authorization: Bearer $CENTRAL_TOKEN" \
             "https://central.sonatype.com/api/v1/publisher/status?id=$DEPLOYMENT_ID"
           echo
           echo "POST publish"
           status=$(curl -sS -o /tmp/central-out -w "%{http_code}" \
-            -u "$CENTRAL_USERNAME:$CENTRAL_TOKEN" \
+            -H "Authorization: Bearer $CENTRAL_TOKEN" \
             -H "Content-Type: application/json" \
             -X POST \
             "https://central.sonatype.com/api/v1/publisher/deployment/$DEPLOYMENT_ID")
@@ -32,7 +32,7 @@ jobs:
           cat /tmp/central-out
           echo
           echo "GET status after"
-          curl -sS -u "$CENTRAL_USERNAME:$CENTRAL_TOKEN" \
+          curl -sS -H "Authorization: Bearer $CENTRAL_TOKEN" \
             "https://central.sonatype.com/api/v1/publisher/status?id=$DEPLOYMENT_ID"
           echo
           if [ "$status" != "204" ] && [ "$status" != "200" ] && [ "$status" != "409" ]; then
