@@ -14,6 +14,29 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class RelayPDFTest {
   @Test
+  void uploadsWithDefaultHttpTransport() throws Exception {
+    var receivedLength = new AtomicReference<String>();
+    var receivedBody = new AtomicReference<byte[]>();
+    var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext("/v1/files", exchange -> {
+      receivedLength.set(exchange.getRequestHeaders().getFirst("Content-Length"));
+      receivedBody.set(exchange.getRequestBody().readAllBytes());
+      byte[] response = "{\"id\":\"local-upload\"}".getBytes(StandardCharsets.UTF_8);
+      exchange.getResponseHeaders().set("Content-Type", "application/json");
+      exchange.sendResponseHeaders(200, response.length);
+      try (var output = exchange.getResponseBody()) { output.write(response); }
+    });
+    server.start();
+    try {
+      var client = new RelayPDF("local-test", "http://127.0.0.1:" + server.getAddress().getPort());
+      byte[] bytes = "%PDF-local-fixture".getBytes(StandardCharsets.UTF_8);
+      assertEquals("local-upload", client.files.upload(bytes, "scan.pdf").get("id"));
+      assertEquals(Integer.toString(bytes.length), receivedLength.get());
+      assertArrayEquals(bytes, receivedBody.get());
+    } finally { server.stop(0); }
+  }
+
+  @Test
   void htmlPdfBinary() throws Exception {
     AtomicReference<String> url = new AtomicReference<>();
     AtomicReference<String> auth = new AtomicReference<>();

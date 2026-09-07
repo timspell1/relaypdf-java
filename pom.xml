@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.relaypdf</groupId>
   <artifactId>relaypdf</artifactId>
-  <version>0.1.1</version>
+  <version>0.1.2</version>
   <name>RelayPDF</name>
   <description>Official Java SDK for RelayPDF — HTML, Markdown, URL, and templates to PDF, LibreOffice convert, PDF tools, barcodes, zip, async jobs, and webhook verification</description>
   <url>https://relaypdf.com/docs/sdks/java</url>

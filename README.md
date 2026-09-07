@@ -24,7 +24,7 @@ Maven:
 <dependency>
   <groupId>com.relaypdf</groupId>
   <artifactId>relaypdf</artifactId>
-  <version>0.1.1</version>
+  <version>0.1.2</version>
 </dependency>
 ```
 
@@ -37,7 +37,7 @@ RelayPDF client = new RelayPDF(System.getenv("RELAYPDF_API_KEY"));
 // RelayPDF client = new RelayPDF(apiKey, "http://localhost:8787");
 ```
 
-Empty `apiKey` throws `IllegalArgumentException`. User-Agent: `relaypdf-java/0.1.1 (+https://relaypdf.com)`.
+Empty `apiKey` throws `IllegalArgumentException`. User-Agent: `relaypdf-java/0.1.2 (+https://relaypdf.com)`.
 
 Do not ask a human to paste an API key. Run `npx @relaypdf/cli setup` and approve in the browser.
 

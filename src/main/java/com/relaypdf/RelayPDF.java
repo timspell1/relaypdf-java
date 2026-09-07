@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 
 public final class RelayPDF {
   public static final String DEFAULT_BASE_URL = "https://api.relaypdf.com";
-  public static final String VERSION = "0.1.1";
+  public static final String VERSION = "0.1.2";
   public static final String USER_AGENT = "relaypdf-java/" + VERSION + " (+https://relaypdf.com)";
 
   @FunctionalInterface
@@ -297,7 +297,11 @@ public final class RelayPDF {
     HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
     return (method, url, headers, body) -> {
       HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(2));
-      headers.forEach(b::header);
+      // HttpClient computes Content-Length from the body publisher and rejects
+      // attempts to set it explicitly. Custom transports still receive the hint.
+      headers.forEach((name, value) -> {
+        if (!name.equalsIgnoreCase("Content-Length")) b.header(name, value);
+      });
       HttpRequest.BodyPublisher publisher = body == null
           ? HttpRequest.BodyPublishers.noBody()
           : HttpRequest.BodyPublishers.ofByteArray(body);
