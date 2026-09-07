@@ -12,19 +12,29 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Publish validated deployment
+      - name: Inspect and publish deployment
         env:
           CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           CENTRAL_TOKEN: ${{ secrets.CENTRAL_TOKEN }}
           DEPLOYMENT_ID: ${{ inputs.deploymentId }}
         run: |
+          echo "GET status"
+          curl -sS -u "$CENTRAL_USERNAME:$CENTRAL_TOKEN" \
+            "https://central.sonatype.com/api/v1/publisher/status?id=$DEPLOYMENT_ID"
+          echo
+          echo "POST publish"
           status=$(curl -sS -o /tmp/central-out -w "%{http_code}" \
             -u "$CENTRAL_USERNAME:$CENTRAL_TOKEN" \
+            -H "Content-Type: application/json" \
             -X POST \
             "https://central.sonatype.com/api/v1/publisher/deployment/$DEPLOYMENT_ID")
           echo "HTTP $status"
           cat /tmp/central-out
           echo
-          if [ "$status" != "204" ] && [ "$status" != "200" ]; then
+          echo "GET status after"
+          curl -sS -u "$CENTRAL_USERNAME:$CENTRAL_TOKEN" \
+            "https://central.sonatype.com/api/v1/publisher/status?id=$DEPLOYMENT_ID"
+          echo
+          if [ "$status" != "204" ] && [ "$status" != "200" ] && [ "$status" != "409" ]; then
             exit 1
           fi
