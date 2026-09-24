@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 
 public final class RelayPDF {
   public static final String DEFAULT_BASE_URL = "https://api.relaypdf.com";
-  public static final String VERSION = "0.1.2";
+  public static final String VERSION = "0.1.3";
   public static final String USER_AGENT = "relaypdf-java/" + VERSION + " (+https://relaypdf.com)";
 
   @FunctionalInterface
@@ -81,6 +81,7 @@ public final class RelayPDF {
 
   public GenerateResult process(String operation, Map<String, Object> input, Map<String, Object> billing) {
     String path = switch (operation) {
+      case "redact" -> "/v1/pdf/redact";
       case "ocr" -> "/v1/pdf/ocr";
       case "pdfa" -> "/v1/pdf/pdfa";
       case "crop" -> "/v1/pdf/crop";
